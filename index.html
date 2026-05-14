@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PLVRS | Dicionário de Português Comprimido</title>
+    <meta
+      name="description"
+      content="Dicionário pt-BR comprimido com conversor, estatísticas e metodologia, em uma interface editorial brutalista."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./src/styles.css" />
+    <script type="module" src="./src/main.js"></script>
+  </head>
+  <body>
+    <header class="masthead">
+      <div class="shell">
+        <div class="masthead-row">
+          <div class="brand">
+            <div class="brand-mark">PLVRS<span class="dot">.</span></div>
+            <div class="brand-sub">dcnr d plvrs cmprmds / br</div>
+          </div>
+          <nav class="nav-sections">
+            <a class="nav-link active" data-nav="conversor" href="#conversor"><span class="num">01</span>Cnvsr</a>
+            <a class="nav-link" data-nav="dicionario" href="#dicionario"><span class="num">02</span>Dcnr</a>
+            <a class="nav-link" data-nav="estatisticas" href="#estatisticas"><span class="num">03</span>Ests</a>
+            <a class="nav-link" data-nav="metodo" href="#metodo"><span class="num">04</span>Mtd</a>
+          </nav>
+          <div class="masthead-meta" id="masthead-meta"></div>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="shell">
+          <div class="hero-edition">
+            <span>vol. 01 — ed. d hj</span>
+            <span class="dash">— — — — —</span>
+            <span>br · pt-br · static edition</span>
+          </div>
+
+          <div class="hero-compact">
+            <div class="hero-mark">
+              <h1 class="hero-brand">PLVRS<span class="dot-red">.</span></h1>
+              <div class="hero-subtitle">dcnr d <em>pt-br cmprmd</em></div>
+            </div>
+            <div class="hero-strapline" id="hero-strapline"></div>
+          </div>
+
+          <div class="hero-meta inline" id="hero-metrics"></div>
+        </div>
+
+        <div class="ticker">
+          <div class="ticker-track" id="hero-ticker"></div>
+        </div>
+      </section>
+
+      <section class="section first" id="conversor">
+        <div class="shell">
+          <div class="section-head">
+            <div class="section-num">§ 01</div>
+            <h2 class="section-title">Conversor</h2>
+            <div class="section-aside">digite, cole, ou clique num exemplo. converte ao vivo, sem botão de submit.</div>
+          </div>
+
+          <div class="conv">
+            <div class="conv-pane">
+              <div class="conv-head">
+                <div class="label" id="input-label">português</div>
+                <div class="meter"><span>caracteres</span><span class="num" id="input-chars">0</span></div>
+              </div>
+              <textarea
+                id="source-text"
+                class="conv-input"
+                rows="8"
+                placeholder="digite uma frase em pt-br…"
+              ></textarea>
+
+              <div class="conv-toolbar">
+                <div class="mode-switch">
+                  <button id="mode-compress" class="active" type="button">pt → cmp</button>
+                  <button id="mode-expand" type="button">cmp → pt</button>
+                </div>
+                <button id="clear-input" class="btn ghost" type="button">lmpr</button>
+              </div>
+            </div>
+
+            <div class="conv-pane out">
+              <div class="conv-head">
+                <div class="label" id="output-label">comprimido</div>
+                <div class="meter"><span>caracteres</span><span class="num" id="output-chars">0</span></div>
+              </div>
+              <div id="result-rendered" class="conv-output"></div>
+
+              <div class="conv-toolbar">
+                <button id="copy-result" class="btn red" type="button">copiar resultado</button>
+                <button id="reuse-output" class="btn ghost" type="button">usar como entrada ↻</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="conv-strip">
+            <div class="strip-label">compressão</div>
+            <div class="bar"><div class="fill" id="compression-fill"></div></div>
+            <div class="pct" id="compression-pct">0%</div>
+            <div class="saved"><span class="num" id="saved-count">0</span> caracteres a menos</div>
+          </div>
+
+          <div class="examples">
+            <div class="ex-label">exemplos →</div>
+            <div id="converter-examples" class="examples-inline"></div>
+          </div>
+
+          <div class="status-inline" id="converter-status">carregando regras…</div>
+        </div>
+      </section>
+
+      <section class="section" id="dicionario" style="background: var(--paper)">
+        <div class="shell">
+          <div class="section-head">
+            <div class="section-num">§ 02</div>
+            <h2 class="section-title">Dicionário</h2>
+            <div class="section-aside">busca ignora acento. chunks são carregados por letra inicial.</div>
+          </div>
+
+          <div class="dict">
+            <aside class="dict-side">
+              <div class="dict-search">
+                <span class="ico">⌕</span>
+                <input id="dictionary-search" type="search" placeholder="buscar palavra ou abreviação…" />
+                <button id="dictionary-clear" class="clr" type="button" hidden>×</button>
+              </div>
+
+              <div class="filter-group">
+                <div class="filter-label">letra inicial</div>
+                <div class="alpha" id="dictionary-alpha"></div>
+              </div>
+
+              <div class="filter-group">
+                <div class="filter-label">tipo de regra</div>
+                <div class="filter-row" id="dictionary-rule-filters"></div>
+              </div>
+            </aside>
+
+            <div class="dict-list">
+              <div class="dict-stat-row">
+                <span id="dictionary-count">prévia editorial do léxico</span>
+                <span class="italic-serif" id="dictionary-chunk-label" style="text-transform: none; letter-spacing: 0; color: var(--muted)">chunk: prévia</span>
+              </div>
+              <div id="dictionary-results"></div>
+              <div class="status-inline" id="dictionary-status">pronto para buscar.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="estatisticas" style="background: var(--paper-2)">
+        <div class="shell">
+          <div class="section-head">
+            <div class="section-num">§ 03</div>
+            <h2 class="section-title">Estatísticas</h2>
+            <div class="section-aside">o que o corpus inteiro diz sobre como a gente escreve em chat.</div>
+          </div>
+
+          <div class="stats">
+            <div class="stat-card big red">
+              <div class="stat-k" style="color: rgba(241,236,225,0.8)">caracteres poupados, no agregado</div>
+              <div class="stat-v" id="stat-chars-saved"></div>
+              <div class="stat-note" style="color: rgba(241,236,225,0.75)">soma total da economia produzida pelo léxico inteiro.</div>
+            </div>
+
+            <div class="stat-card big">
+              <div class="stat-k">verbetes no dicionário</div>
+              <div class="stat-v" id="stat-total-words"></div>
+              <div class="stat-note">português indexado por letra inicial e carregado sob demanda no browser.</div>
+            </div>
+
+            <div class="stat-card med dark">
+              <div class="stat-k">compressão média</div>
+              <div class="stat-v" id="stat-compression-rate"></div>
+              <div class="stat-note">quanto o conjunto inteiro encolhe com a heurística atual.</div>
+            </div>
+
+            <div class="stat-card med">
+              <div class="stat-k">atalhos manuais</div>
+              <div class="stat-v" id="stat-manual-total"></div>
+              <div class="stat-note">palavras e expressões fixas preservadas por uso real de chat.</div>
+            </div>
+
+            <div class="stat-card med">
+              <div class="stat-k">tamanho dos dados</div>
+              <div class="stat-v"><span>44<span class="unit">mb</span></span></div>
+              <div class="stat-note">26 chunks de `a` a `z`, mais metadados e regras de frase.</div>
+            </div>
+
+            <div class="stat-card wide">
+              <div class="stat-k">como cada verbete foi comprimido</div>
+              <div class="rule-rows" id="rule-breakdown"></div>
+            </div>
+
+            <div class="stat-card wide">
+              <div class="stat-k">as maiores economias do dicionário</div>
+              <div class="savings-list" id="top-savings-list"></div>
+            </div>
+
+            <div class="stat-card wide">
+              <div class="stat-k">distribuição por letra inicial</div>
+              <div class="dist-bars" id="letter-distribution"></div>
+              <div style="margin-top: 36px" class="stat-note">letras iniciais mais frequentes sobem; letras raras ficam achatadas no fim da escala.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="metodo">
+        <div class="shell">
+          <div class="section-head">
+            <div class="section-num">§ 04</div>
+            <h2 class="section-title">Método<em> &amp; </em>transparência</h2>
+            <div class="section-aside">sem backend, sem ml, com prioridade de leitura para o uso real de chat. só regra e corpus.</div>
+          </div>
+
+          <div class="method">
+            <div class="method-col">
+              <h3>Como a compressão <em>funciona</em></h3>
+              <p>
+                Toda palavra passa primeiro pela tabela de atalhos manuais. Hoje ela contém
+                <em> <span id="manual-rule-count">0</span> regras fixas</em> entre palavras e expressões.
+              </p>
+              <p>
+                Fora disso, a heurística atual tenta a <span class="marker">menor forma direta possível</span>,
+                misturando cortes curtos, bordas, consoantes e prefixos antes de desistir da compressão.
+              </p>
+              <p>
+                Quando duas palavras caem na mesma forma, o sistema escolhe um vencedor para o atalho curto e empurra as
+                outras para candidatos maiores, sempre sem deixar uma palavra tomar o
+                <span class="marker">original canônico</span> de outra.
+              </p>
+              <p style="margin-top: 18px">
+                Acentos são ignorados na resolução do conversor. Isso evita bugs artificiais entre pares como
+                <em> manda / mandá</em> e faz o sistema escolher uma forma canônica estável.
+              </p>
+
+              <h3 style="margin-top: 30px">Atalhos <em>manuais</em></h3>
+              <div class="shortcuts-table" id="manual-shortcuts-table"></div>
+            </div>
+
+            <div class="method-col">
+              <h3>Princípios</h3>
+              <div class="principles">
+                <div class="principle">
+                  <div class="n">i.</div>
+                  <div>
+                    <h4>Prioridade de leitura</h4>
+                    <p>quase todo atalho continua único; em exceções raras, uma forma muito comum de chat pode vencer um verbete literal raro.</p>
+                  </div>
+                </div>
+                <div class="principle">
+                  <div class="n">ii.</div>
+                  <div>
+                    <h4>Compressão máxima útil</h4>
+                    <p>o objetivo não é só ficar bonito; é reduzir o texto o máximo possível sem transformar a leitura em charada.</p>
+                  </div>
+                </div>
+                <div class="principle">
+                  <div class="n">iii.</div>
+                  <div>
+                    <h4>Uso real de chat</h4>
+                    <p>abreviações manuais entram porque já circulam em uso cotidiano, não porque a interface resolveu inventá-las.</p>
+                  </div>
+                </div>
+              </div>
+
+              <h3 style="margin-top: 30px">Pipeline atual</h3>
+              <div class="shortcuts-table" id="methodology-list"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <div class="shell">
+          <hr class="rule-thick" />
+          <div class="footer-row" style="padding-top: 24px">
+            <div class="colophon"><em>PLVRS</em> — um dicionário público<br />de português comprimido.</div>
+            <div class="meta" id="footer-meta-left"></div>
+            <div class="meta right" id="footer-meta-right"></div>
+          </div>
+        </div>
+      </footer>
+    </main>
+
+    <div class="toast" id="toast"><span class="dot"></span><span id="toast-text"></span></div>
+  </body>
+</html>
