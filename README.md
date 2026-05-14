@@ -29,6 +29,12 @@ Se quiser recalcular os JSONs do dicionário e das estatísticas:
 python3 scripts/build_data.py
 ```
 
+O ranking leve usado para dar precedência a palavras muito frequentes fica em:
+
+```text
+config/frequency_rank.json
+```
+
 ## Base lexical
 
 Os arquivos em `data/` já foram gerados e estão prontos para uso no navegador.
@@ -43,4 +49,5 @@ Fonte usada:
 - `index.html`: layout principal
 - `src/main.js`: lógica da interface, busca e conversão
 - `src/styles.css`: visual
+- `config/frequency_rank.json`: ranking leve de frequência para desempates
 - `data/`: chunks JSON do léxico e metadados

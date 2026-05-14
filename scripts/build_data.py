@@ -16,6 +16,9 @@ MANUAL_ENTRIES = [
     {"source": "também", "compressed": "tbm", "kind": "manual-word", "reason": "abreviação popular preservando consoantes"},
     {"source": "porque", "compressed": "pq", "kind": "manual-word", "reason": "atalho frequente em mensagens"},
     {"source": "que", "compressed": "q", "kind": "manual-word", "reason": "atalho curtíssimo muito comum em chat, mesmo sobrepondo o verbete literal raro"},
+    {"source": "não", "compressed": "n", "kind": "manual-word", "reason": "forma ultra frequente ganha precedencia sobre o verbete literal raro"},
+    {"source": "sim", "compressed": "s", "kind": "manual-word", "reason": "forma ultra frequente ganha precedencia sobre o verbete literal raro"},
+    {"source": "olhos", "compressed": "olhs", "kind": "manual-word", "reason": "esqueleto consonantal curto priorizado para um termo muito frequente"},
     {"source": "beleza", "compressed": "blz", "kind": "manual-word", "reason": "forma popular de internet"},
     {"source": "falou", "compressed": "flw", "kind": "manual-word", "reason": "forma popular preservando ritmo sonoro"},
     {"source": "galera", "compressed": "glr", "kind": "manual-word", "reason": "atalho de uso corrente"},
@@ -57,6 +60,22 @@ def load_manual_entries(_data_dir: Path) -> list[dict]:
     return [entry.copy() for entry in MANUAL_ENTRIES]
 
 
+def load_frequency_rank(root_dir: Path) -> dict:
+    payload = json.loads((root_dir / "config" / "frequency_rank.json").read_text(encoding="utf-8"))
+    priorities: dict[str, int] = {}
+    for word, score in payload["entries"]:
+        normalized = normalize_word(word)
+        if not normalized:
+            continue
+        priorities[normalized] = max(int(score), priorities.get(normalized, 0))
+    return {
+        "version": payload["version"],
+        "description": payload["description"],
+        "sources": payload["sources"],
+        "priorities": priorities,
+    }
+
+
 def sort_variants(variants: list[str]) -> list[str]:
     return sorted(
         variants,
@@ -71,6 +90,10 @@ def sort_variants(variants: list[str]) -> list[str]:
 
 def count_accents(value: str) -> int:
     return sum(1 for char in value if normalize_text(char) != char.lower())
+
+
+def usage_priority(normalized_word: str, priorities: dict[str, int]) -> int:
+    return priorities.get(normalized_word, 0)
 
 
 def build_edge_priority(normalized_word: str) -> tuple[list[str], list[int]]:
@@ -105,6 +128,13 @@ def abbreviate(letters: list[str], ranked: list[int], level: int) -> str:
     return "".join(letters[index] for index in chosen)
 
 
+def build_consonant_skeleton(normalized_word: str) -> str | None:
+    skeleton = normalized_word[:1] + "".join(char for char in normalized_word[1:] if char not in VOWELS)
+    if 1 < len(skeleton) < len(normalized_word):
+        return skeleton
+    return None
+
+
 def build_candidate_sequence(normalized_word: str) -> list[dict]:
     letters, ranked = build_edge_priority(normalized_word)
     if len(letters) <= 2:
@@ -112,6 +142,8 @@ def build_candidate_sequence(normalized_word: str) -> list[dict]:
 
     candidates: list[dict] = []
     seen: set[str] = set()
+    skeleton_candidate = build_consonant_skeleton(normalized_word)
+    skeleton_length = len(skeleton_candidate) if skeleton_candidate else 0
 
     for length in range(2, len(letters) + 1):
         if length == len(letters):
@@ -120,6 +152,10 @@ def build_candidate_sequence(normalized_word: str) -> list[dict]:
                 seen.add(candidate)
                 candidates.append({"text": candidate, "kind": "original"})
             continue
+
+        if skeleton_candidate and skeleton_length == length and skeleton_candidate not in seen:
+            seen.add(skeleton_candidate)
+            candidates.append({"text": skeleton_candidate, "kind": "direct"})
 
         if length >= 3:
             prefix_candidate = normalized_word[:length]
@@ -139,6 +175,7 @@ def choose_collision_winner(peers: list[dict]) -> dict:
     return sorted(
         peers,
         key=lambda item: (
+            -item["priority"],
             len(item["candidates"]) - item["index"],
             len(item["normalized"]),
             count_accents(item["preferredSource"]),
@@ -181,10 +218,11 @@ def finalize_group(item: dict, candidate_meta: dict | None) -> list[dict]:
     return entries
 
 
-def build_entries(words: list[str], manual_entries: list[dict]) -> tuple[list[dict], list[dict]]:
+def build_entries(words: list[str], manual_entries: list[dict], frequency_rank: dict) -> tuple[list[dict], list[dict]]:
     manual_words = {normalize_word(entry["source"]): entry for entry in manual_entries if entry["kind"] == "manual-word"}
     manual_phrases = [entry for entry in manual_entries if entry["kind"] == "manual-phrase"]
     reserved = {normalize_word(entry["compressed"]) for entry in manual_entries}
+    priorities = frequency_rank["priorities"]
     grouped_words: dict[str, list[str]] = defaultdict(list)
 
     for word in words:
@@ -217,6 +255,7 @@ def build_entries(words: list[str], manual_entries: list[dict]) -> tuple[list[di
                 "normalized": normalized,
                 "variants": variants,
                 "preferredSource": variants[0],
+                "priority": usage_priority(normalized, priorities),
                 "candidates": build_candidate_sequence(normalized),
                 "index": 0,
                 "hadConflict": False,
@@ -358,7 +397,13 @@ def build_stats(entries: list[dict], phrase_entries: list[dict]) -> dict:
     }
 
 
-def write_data(data_dir: Path, entries: list[dict], phrase_entries: list[dict], manual_entries: list[dict]) -> None:
+def write_data(
+    data_dir: Path,
+    entries: list[dict],
+    phrase_entries: list[dict],
+    manual_entries: list[dict],
+    frequency_rank: dict,
+) -> None:
     stats = build_stats(entries, phrase_entries)
 
     if data_dir.exists():
@@ -385,12 +430,19 @@ def write_data(data_dir: Path, entries: list[dict], phrase_entries: list[dict], 
         "methodology": [
             "Ignora acentos na resolucao do conversor para evitar colisoes artificiais entre variantes.",
             "Agrupa variantes acentuais da mesma palavra antes de decidir a abreviacao.",
-            "Tenta formas curtas diretas e tambem prefixos, em vez de depender de uma unica ordem de corte.",
+            "Tenta formas curtas diretas, esqueletos consonantais em ordem natural e tambem prefixos.",
+            "Quando varias palavras disputam a mesma forma, palavras muito frequentes recebem prioridade no desempate.",
             "Quando varias palavras colidem, uma delas pode ficar com a forma curta e as outras sobem para candidatos maiores.",
             "Nenhuma palavra pode tomar como abreviacao o original canonico de outra palavra.",
-            "Alguns atalhos manuais ultrafrequentes podem vencer um verbete literal raro, como que -> q.",
+            "Alguns atalhos manuais ultrafrequentes podem vencer um verbete literal raro, como que -> q, nao -> n e sim -> s.",
             "Mantem regras manuais apenas em atalhos muito consolidados no uso informal.",
         ],
+        "frequencyRanking": {
+            "version": frequency_rank["version"],
+            "description": frequency_rank["description"],
+            "sources": frequency_rank["sources"],
+            "entryCount": len(frequency_rank["priorities"]),
+        },
         "letters": LETTERS,
         "stats": stats,
         "manualEntries": manual_entries,
@@ -408,9 +460,10 @@ def main() -> None:
     root = Path(__file__).resolve().parents[1]
     data_dir = root / "data"
     manual_entries = load_manual_entries(data_dir)
+    frequency_rank = load_frequency_rank(root)
     source_words = load_source_words(data_dir)
-    entries, phrase_entries = build_entries(source_words, manual_entries)
-    write_data(data_dir, entries, phrase_entries, manual_entries)
+    entries, phrase_entries = build_entries(source_words, manual_entries, frequency_rank)
+    write_data(data_dir, entries, phrase_entries, manual_entries, frequency_rank)
 
     stats = json.loads((data_dir / "meta.json").read_text(encoding="utf-8"))["stats"]
     print(
